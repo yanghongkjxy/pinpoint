@@ -32,6 +32,8 @@ public interface AgentOption {
 
     String getApplicationName();
 
+    boolean isContainer();
+
     ProfilerConfig getProfilerConfig();
 
     List<String> getPluginJars();

@@ -1,11 +1,11 @@
 /*
- * Copyright 2014 NAVER Corp.
+ * Copyright 2018 NAVER Corp.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,9 +25,9 @@ import com.navercorp.pinpoint.bootstrap.logging.PLogger;
 import com.navercorp.pinpoint.bootstrap.logging.PLoggerFactory;
 import com.navercorp.pinpoint.bootstrap.plugin.request.ClientRequestRecorder;
 import com.navercorp.pinpoint.bootstrap.plugin.request.RequestTraceWriter;
-import com.navercorp.pinpoint.plugin.ning.asynchttpclient.NingAsyncHttpClientPlugin;
+import com.navercorp.pinpoint.plugin.ning.asynchttpclient.NingAsyncHttpClientConstants;
 import com.navercorp.pinpoint.plugin.ning.asynchttpclient.NingAsyncHttpClientPluginConfig;
-import com.navercorp.pinpoint.plugin.ning.asynchttpclient.NingAsyncHttpClientRequestTraceV1;
+import com.navercorp.pinpoint.plugin.ning.asynchttpclient.NingAsyncHttpClientRequestWrapperV1;
 import com.ning.http.client.Request;
 
 /**
@@ -73,7 +73,7 @@ public class ExecuteRequestInterceptor implements AroundInterceptor {
         final boolean sampling = trace.canSampled();
         if (!sampling) {
             if (httpRequest != null) {
-                final RequestTraceWriter requestTraceWriter = new RequestTraceWriter(new NingAsyncHttpClientRequestTraceV1(httpRequest));
+                final RequestTraceWriter requestTraceWriter = new RequestTraceWriter(new NingAsyncHttpClientRequestWrapperV1(httpRequest));
                 requestTraceWriter.write();
             }
             return;
@@ -83,10 +83,10 @@ public class ExecuteRequestInterceptor implements AroundInterceptor {
         final SpanEventRecorder recorder = trace.currentSpanEventRecorder();
         final TraceId nextId = trace.getTraceId().getNextTraceId();
         recorder.recordNextSpanId(nextId.getSpanId());
-        recorder.recordServiceType(NingAsyncHttpClientPlugin.ASYNC_HTTP_CLIENT);
+        recorder.recordServiceType(NingAsyncHttpClientConstants.ASYNC_HTTP_CLIENT);
 
         if (httpRequest != null) {
-            final RequestTraceWriter requestTraceWriter = new RequestTraceWriter(new NingAsyncHttpClientRequestTraceV1(httpRequest));
+            final RequestTraceWriter requestTraceWriter = new RequestTraceWriter(new NingAsyncHttpClientRequestWrapperV1(httpRequest));
             requestTraceWriter.write(nextId, this.traceContext.getApplicationName(), this.traceContext.getServerTypeCode(), this.traceContext.getProfilerConfig().getApplicationNamespace());
         }
     }
@@ -112,7 +112,7 @@ public class ExecuteRequestInterceptor implements AroundInterceptor {
             final Request httpRequest = (Request) args[0];
             if (httpRequest != null) {
                 // Accessing httpRequest here not BEFORE() because it can cause side effect.
-                this.clientRequestRecorder.record(recorder, new NingAsyncHttpClientRequestTraceV1(httpRequest), throwable);
+                this.clientRequestRecorder.record(recorder, new NingAsyncHttpClientRequestWrapperV1(httpRequest), throwable);
             }
             recorder.recordApi(descriptor);
             recorder.recordException(throwable);

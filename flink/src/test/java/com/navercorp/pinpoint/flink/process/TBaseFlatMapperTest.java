@@ -1,11 +1,11 @@
 /*
- * Copyright 2017 NAVER Corp.
+ * Copyright 2018 NAVER Corp.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,11 +18,16 @@ package com.navercorp.pinpoint.flink.process;
 
 import com.navercorp.pinpoint.common.server.bo.stat.join.*;
 import com.navercorp.pinpoint.flink.mapper.thrift.stat.JoinAgentStatBoMapper;
-import com.navercorp.pinpoint.thrift.dto.ThriftRequest;
+import com.navercorp.pinpoint.io.header.Header;
+import com.navercorp.pinpoint.io.request.DefaultMessage;
+import com.navercorp.pinpoint.io.request.DefaultServerRequest;
+import com.navercorp.pinpoint.io.request.Message;
+import com.navercorp.pinpoint.io.request.ServerRequest;
 import com.navercorp.pinpoint.thrift.dto.flink.*;
 import com.navercorp.pinpoint.io.header.v1.HeaderV1;
 import org.apache.flink.api.common.functions.util.ListCollector;
 import org.apache.flink.api.java.tuple.Tuple3;
+import org.apache.thrift.TBase;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -51,7 +56,7 @@ public class TBaseFlatMapperTest {
         TFAgentStatBatch tfAgentStatBatch = createTFAgentStatBatch();
         ArrayList<Tuple3<String, JoinStatBo, Long>> dataList = new ArrayList<>();
         ListCollector<Tuple3<String, JoinStatBo, Long>> collector = new ListCollector<>(dataList);
-        ThriftRequest request = new ThriftRequest(new HeaderV1((short) 1000), tfAgentStatBatch);
+        ServerRequest<TBase<?, ?>> request = newServerRequest(tfAgentStatBatch);
         mapper.flatMap(request, collector);
 
         assertEquals(dataList.size(), 2);
@@ -145,7 +150,7 @@ public class TBaseFlatMapperTest {
         TFAgentStatBatch tfAgentStatBatch = createTFAgentStatBatch2();
         ArrayList<Tuple3<String, JoinStatBo, Long>> dataList = new ArrayList<>();
         ListCollector<Tuple3<String, JoinStatBo, Long>> collector = new ListCollector<>(dataList);
-        ThriftRequest request = new ThriftRequest(new HeaderV1((short) 1000), tfAgentStatBatch);
+        ServerRequest<TBase<?, ?>> request = newServerRequest(tfAgentStatBatch);
         mapper.flatMap(request, collector);
 
         assertEquals(dataList.size(), 2);
@@ -224,7 +229,7 @@ public class TBaseFlatMapperTest {
         TFAgentStatBatch tfAgentStatBatch = createTFAgentStatBatch3();
         ArrayList<Tuple3<String, JoinStatBo, Long>> dataList = new ArrayList<>();
         ListCollector<Tuple3<String, JoinStatBo, Long>> collector = new ListCollector<>(dataList);
-        ThriftRequest request = new ThriftRequest(new HeaderV1((short) 1000), tfAgentStatBatch);
+        ServerRequest<TBase<?, ?>> request = newServerRequest(tfAgentStatBatch);
         mapper.flatMap(request, collector);
 
         assertEquals(dataList.size(), 2);
@@ -246,6 +251,12 @@ public class TBaseFlatMapperTest {
         assertEquals(joinApplicationStatBo.getTimestamp(), 1491274140000L);
         assertEquals(joinApplicationStatBo.getStatType(), StatType.APP_STST);
         assertJoinTransactionBo(joinApplicationStatBo.getJoinTransactionBoList());
+    }
+
+    private ServerRequest<TBase<?, ?>> newServerRequest(TFAgentStatBatch tfAgentStatBatch) {
+        final Header header = new HeaderV1((short) 1000);
+        final Message<TBase<?, ?>> message = new DefaultMessage<>(header, tfAgentStatBatch);
+        return new DefaultServerRequest<TBase<?, ?>>(message, "127.0.0.1", 8080);
     }
 
     private void assertJoinTransactionBo(List<JoinTransactionBo> joinTransactionBoList) {
@@ -319,7 +330,7 @@ public class TBaseFlatMapperTest {
         TFAgentStatBatch tfAgentStatBatch = createTFAgentStatBatch4();
         ArrayList<Tuple3<String, JoinStatBo, Long>> dataList = new ArrayList<>();
         ListCollector<Tuple3<String, JoinStatBo, Long>> collector = new ListCollector<>(dataList);
-        ThriftRequest request = new ThriftRequest(new HeaderV1((short) 1000), tfAgentStatBatch);
+        ServerRequest<TBase<?, ?>> request = newServerRequest(tfAgentStatBatch);
         mapper.flatMap(request, collector);
 
         assertEquals(dataList.size(), 2);
@@ -399,7 +410,7 @@ public class TBaseFlatMapperTest {
         TFAgentStatBatch tfAgentStatBatch = createTFAgentStatBatch5();
         ArrayList<Tuple3<String, JoinStatBo, Long>> dataList = new ArrayList<>();
         ListCollector<Tuple3<String, JoinStatBo, Long>> collector = new ListCollector<>(dataList);
-        ThriftRequest request = new ThriftRequest(new HeaderV1((short) 1000), tfAgentStatBatch);
+        ServerRequest<TBase<?, ?>> request = newServerRequest(tfAgentStatBatch);
         mapper.flatMap(request, collector);
 
         assertEquals(dataList.size(), 2);

@@ -131,6 +131,17 @@ public class DefaultProfilerConfig implements ProfilerConfig {
     private boolean tcpDataSenderCommandActiveThreadDumpEnable = false;
     private boolean tcpDataSenderCommandActiveThreadLightDumpEnable = false;
 
+    private static long DEFAULT_DATA_SENDER_PINPOINT_CLIENT_WRITE_TIMEOUT = 3 * 1000;
+    private long tcpDataSenderPinpointClientWriteTimeout = DEFAULT_DATA_SENDER_PINPOINT_CLIENT_WRITE_TIMEOUT;
+    private static long DEFAULT_DATA_SENDER_PINPOINT_CLIENT_REQUEST_TIMEOUT = 3 * 1000;
+    private long tcpDataSenderPinpointClientRequestTimeout = DEFAULT_DATA_SENDER_PINPOINT_CLIENT_REQUEST_TIMEOUT;
+    private static long DEFAULT_DATA_SENDER_PINPOINT_CLIENT_RECONNECT_INTERVAL = 3 * 1000;
+    private long tcpDataSenderPinpointClientReconnectInterval = DEFAULT_DATA_SENDER_PINPOINT_CLIENT_RECONNECT_INTERVAL;
+    private static long DEFAULT_DATA_SENDER_PINPOINT_CLIENT_PING_INTERVAL = 60 * 1000 * 5;
+    private long tcpDataSenderPinpointClientPingInterval = DEFAULT_DATA_SENDER_PINPOINT_CLIENT_PING_INTERVAL;
+    private static long DEFAULT_DATA_SENDER_PINPOINT_CLIENT_HANDSHAKE_INTERVAL = 60 * 1000 * 1;
+    private long tcpDataSenderPinpointClientHandshakeInterval = DEFAULT_DATA_SENDER_PINPOINT_CLIENT_HANDSHAKE_INTERVAL;
+
     private boolean traceAgentActiveThread = true;
 
     private boolean traceAgentDataSource = false;
@@ -173,7 +184,7 @@ public class DefaultProfilerConfig implements ProfilerConfig {
 
     private boolean proxyHttpHeaderEnable = true;
 
-    private List<String> httpStatusCodeErrors = Collections.emptyList();
+    private HttpStatusCodeErrors httpStatusCodeErrors = new HttpStatusCodeErrors();
 
     private String injectionModuleFactoryClazzName = null;
     private String applicationNamespace = "";
@@ -283,6 +294,31 @@ public class DefaultProfilerConfig implements ProfilerConfig {
     @Override
     public boolean isTcpDataSenderCommandActiveThreadLightDumpEnable() {
         return tcpDataSenderCommandActiveThreadLightDumpEnable;
+    }
+
+    @Override
+    public long getTcpDataSenderPinpointClientWriteTimeout() {
+        return tcpDataSenderPinpointClientWriteTimeout;
+    }
+
+    @Override
+    public long getTcpDataSenderPinpointClientRequestTimeout() {
+        return tcpDataSenderPinpointClientRequestTimeout;
+    }
+
+    @Override
+    public long getTcpDataSenderPinpointClientReconnectInterval() {
+        return tcpDataSenderPinpointClientReconnectInterval;
+    }
+
+    @Override
+    public long getTcpDataSenderPinpointClientPingInterval() {
+        return tcpDataSenderPinpointClientPingInterval;
+    }
+
+    @Override
+    public long getTcpDataSenderPinpointClientHandshakeInterval() {
+        return tcpDataSenderPinpointClientHandshakeInterval;
     }
 
     @Override
@@ -480,7 +516,7 @@ public class DefaultProfilerConfig implements ProfilerConfig {
     }
 
     @Override
-    public List<String> getHttpStatusCodeErrors() {
+    public HttpStatusCodeErrors getHttpStatusCodeErrors() {
         return httpStatusCodeErrors;
     }
 
@@ -540,6 +576,12 @@ public class DefaultProfilerConfig implements ProfilerConfig {
         this.tcpDataSenderCommandActiveThreadCountEnable = readBoolean("profiler.tcpdatasender.command.activethread.count.enable", false);
         this.tcpDataSenderCommandActiveThreadDumpEnable = readBoolean("profiler.tcpdatasender.command.activethread.threaddump.enable", false);
         this.tcpDataSenderCommandActiveThreadLightDumpEnable = readBoolean("profiler.tcpdatasender.command.activethread.threadlightdump.enable", false);
+
+        this.tcpDataSenderPinpointClientWriteTimeout = readLong("profiler.tcpdatasender.client.write.timeout", DEFAULT_DATA_SENDER_PINPOINT_CLIENT_WRITE_TIMEOUT);
+        this.tcpDataSenderPinpointClientRequestTimeout = readLong("profiler.tcpdatasender.client.request.timeout", DEFAULT_DATA_SENDER_PINPOINT_CLIENT_REQUEST_TIMEOUT);
+        this.tcpDataSenderPinpointClientReconnectInterval = readLong("profiler.tcpdatasender.client.reconnect.interval", DEFAULT_DATA_SENDER_PINPOINT_CLIENT_RECONNECT_INTERVAL);
+        this.tcpDataSenderPinpointClientPingInterval = readLong("profiler.tcpdatasender.client.ping.interval", DEFAULT_DATA_SENDER_PINPOINT_CLIENT_PING_INTERVAL);
+        this.tcpDataSenderPinpointClientHandshakeInterval = readLong("profiler.tcpdatasender.client.handshake.interval", DEFAULT_DATA_SENDER_PINPOINT_CLIENT_HANDSHAKE_INTERVAL);
 
         this.traceAgentActiveThread = readBoolean("profiler.pinpoint.activethread", true);
 
@@ -603,7 +645,7 @@ public class DefaultProfilerConfig implements ProfilerConfig {
         // proxy http header names
         this.proxyHttpHeaderEnable = readBoolean("profiler.proxy.http.header.enable", true);
 
-        this.httpStatusCodeErrors = readList("profiler.http.status.code.errors");
+        this.httpStatusCodeErrors = new HttpStatusCodeErrors(readList("profiler.http.status.code.errors"));
 
         this.injectionModuleFactoryClazzName = readString("profiler.guice.module.factory", null);
 
@@ -742,6 +784,11 @@ public class DefaultProfilerConfig implements ProfilerConfig {
         sb.append(", tcpDataSenderCommandActiveThreadCountEnable=").append(tcpDataSenderCommandActiveThreadCountEnable);
         sb.append(", tcpDataSenderCommandActiveThreadDumpEnable=").append(tcpDataSenderCommandActiveThreadDumpEnable);
         sb.append(", tcpDataSenderCommandActiveThreadLightDumpEnable=").append(tcpDataSenderCommandActiveThreadLightDumpEnable);
+        sb.append(", tcpDataSenderPinpointClientWriteTimeout=").append(tcpDataSenderPinpointClientWriteTimeout);
+        sb.append(", tcpDataSenderPinpointClientRequestTimeout=").append(tcpDataSenderPinpointClientRequestTimeout);
+        sb.append(", tcpDataSenderPinpointClientReconnectInterval=").append(tcpDataSenderPinpointClientReconnectInterval);
+        sb.append(", tcpDataSenderPinpointClientPingInterval=").append(tcpDataSenderPinpointClientPingInterval);
+        sb.append(", tcpDataSenderPinpointClientHandshakeInterval=").append(tcpDataSenderPinpointClientHandshakeInterval);
         sb.append(", traceAgentActiveThread=").append(traceAgentActiveThread);
         sb.append(", traceAgentDataSource=").append(traceAgentDataSource);
         sb.append(", dataSourceTraceLimitSize=").append(dataSourceTraceLimitSize);
@@ -775,4 +822,5 @@ public class DefaultProfilerConfig implements ProfilerConfig {
         sb.append('}');
         return sb.toString();
     }
+
 }

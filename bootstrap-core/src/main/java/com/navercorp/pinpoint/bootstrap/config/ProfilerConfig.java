@@ -65,6 +65,16 @@ public interface ProfilerConfig {
 
     boolean isTcpDataSenderCommandActiveThreadLightDumpEnable();
 
+    long getTcpDataSenderPinpointClientWriteTimeout();
+
+    long getTcpDataSenderPinpointClientRequestTimeout();
+
+    long getTcpDataSenderPinpointClientReconnectInterval();
+
+    long getTcpDataSenderPinpointClientPingInterval();
+
+    long getTcpDataSenderPinpointClientHandshakeInterval();
+
     boolean isTraceAgentActiveThread();
 
     boolean isTraceAgentDataSource();
@@ -140,7 +150,7 @@ public interface ProfilerConfig {
 
     boolean isProxyHttpHeaderEnable();
 
-    List<String> getHttpStatusCodeErrors();
+    HttpStatusCodeErrors getHttpStatusCodeErrors();
 
     String getInjectionModuleFactoryClazzName();
 

@@ -1,11 +1,11 @@
 /*
- * Copyright 2014 NAVER Corp.
+ * Copyright 2018 NAVER Corp.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -484,7 +484,7 @@ public class AgentInfoSenderTest {
     }
 
     private AgentInformation createAgentInformation() {
-        AgentInformation agentInfo = new DefaultAgentInformation("agentId", "appName", System.currentTimeMillis(), 1111, "hostname", "127.0.0.1", ServiceType.USER,
+        AgentInformation agentInfo = new DefaultAgentInformation("agentId", "appName", false, System.currentTimeMillis(), 1111, "hostname", "127.0.0.1", ServiceType.USER,
                 JvmUtils.getSystemProperty(SystemPropertyKey.JAVA_VERSION), Version.VERSION);
         return agentInfo;
     }
@@ -558,7 +558,7 @@ public class AgentInfoSenderTest {
 
                 this.successCount.incrementAndGet();
 
-                pinpointSocket.response(requestPacket, resultBytes);
+                pinpointSocket.response(requestPacket.getRequestId(), resultBytes);
             } catch (TException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -579,7 +579,8 @@ public class AgentInfoSenderTest {
 
     private PinpointClientFactory createPinpointClientFactory() {
         PinpointClientFactory clientFactory = new DefaultPinpointClientFactory();
-        clientFactory.setTimeoutMillis(1000 * 5);
+        clientFactory.setWriteTimeoutMillis(1000 * 3);
+        clientFactory.setRequestTimeoutMillis(1000 * 5);
         clientFactory.setProperties(Collections.<String, Object> emptyMap());
 
         return clientFactory;
