@@ -17,7 +17,7 @@
 package com.navercorp.pinpoint.web.service.stat;
 
 import com.navercorp.pinpoint.common.server.bo.stat.AgentWarningStatDataPoint;
-import com.navercorp.pinpoint.common.server.bo.stat.DeadlockBo;
+import com.navercorp.pinpoint.common.server.bo.stat.DeadlockThreadCountBo;
 import com.navercorp.pinpoint.common.util.CollectionUtils;
 import com.navercorp.pinpoint.rpc.util.ListUtils;
 import com.navercorp.pinpoint.web.dao.stat.DeadlockDao;
@@ -72,13 +72,10 @@ public class AgentWarningStatServiceImpl implements AgentWarningStatService {
     }
 
     private List<AgentWarningStatDataPoint> select0(String agentId, Range range) {
-        List<AgentWarningStatDataPoint> agentWarningStatDataPointList = new ArrayList<>();
 
-        List<DeadlockBo> deadlockBoList = deadlockDao.getAgentStatList(agentId, range);
-        for (DeadlockBo deadlockBo : deadlockBoList) {
-            agentWarningStatDataPointList.add(deadlockBo);
-        }
+        List<DeadlockThreadCountBo> deadlockThreadCountBoList = deadlockDao.getAgentStatList(agentId, range);
 
+        List<AgentWarningStatDataPoint> agentWarningStatDataPointList = new ArrayList<>(deadlockThreadCountBoList);
         return agentWarningStatDataPointList;
     }
 

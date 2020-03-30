@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 NAVER Corp.
+ * Copyright 2019 NAVER Corp.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,21 +18,16 @@ package com.navercorp.pinpoint.test;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Scopes;
-import com.google.inject.util.Providers;
-import com.navercorp.pinpoint.common.plugin.PluginLoader;
-import com.navercorp.pinpoint.common.plugin.ServerPluginLoader;
 import com.navercorp.pinpoint.common.util.ClassLoaderUtils;
 import com.navercorp.pinpoint.profiler.context.DefaultServerMetaDataRegistryService;
 import com.navercorp.pinpoint.profiler.context.ServerMetaDataRegistryService;
-import com.navercorp.pinpoint.profiler.context.module.SpanDataSender;
-import com.navercorp.pinpoint.profiler.context.module.StatDataSender;
+import com.navercorp.pinpoint.profiler.context.TraceDataFormatVersion;
+import com.navercorp.pinpoint.profiler.context.module.PluginClassLoader;
 import com.navercorp.pinpoint.profiler.context.storage.StorageFactory;
 import com.navercorp.pinpoint.profiler.plugin.PluginContextLoadResult;
-import com.navercorp.pinpoint.profiler.sender.DataSender;
-import com.navercorp.pinpoint.profiler.sender.EnhancedDataSender;
+import com.navercorp.pinpoint.profiler.plugin.PluginSetup;
+import com.navercorp.pinpoint.profiler.plugin.ProfilerPluginContextLoader;
 import com.navercorp.pinpoint.profiler.util.RuntimeMXBeanUtils;
-import com.navercorp.pinpoint.rpc.client.PinpointClientFactory;
-import org.apache.thrift.TBase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,29 +46,18 @@ public class MockApplicationContextModule extends AbstractModule {
 
     @Override
     protected void configure() {
+        logger.info("configure {}", this.getClass().getSimpleName());
 
-        final DataSender spanDataSender = new ListenableDataSender<TBase<?, ?>>("SpanDataSender");
-        logger.debug("spanDataSender:{}", spanDataSender);
-        bind(DataSender.class).annotatedWith(SpanDataSender.class).toInstance(spanDataSender);
-
-        final DataSender statDataSender = new ListenableDataSender<TBase<?, ?>>("StatDataSender");
-        logger.debug("statDataSender:{}", statDataSender);
-        bind(DataSender.class).annotatedWith(StatDataSender.class).toInstance(statDataSender);
-
-        StorageFactory storageFactory = newStorageFactory(spanDataSender);
-        logger.debug("spanFactory:{}", spanDataSender);
-        bind(StorageFactory.class).toInstance(storageFactory);
-
-        bind(PinpointClientFactory.class).toProvider(Providers.of((PinpointClientFactory)null));
-
-        EnhancedDataSender enhancedDataSender = new TestTcpDataSender();
-        logger.debug("enhancedDataSender:{}", enhancedDataSender);
-        bind(EnhancedDataSender.class).toInstance(enhancedDataSender);
+        bind(TraceDataFormatVersion.class).toInstance(TraceDataFormatVersion.V1);
+        bind(StorageFactory.class).to(TestSpanStorageFactory.class);
 
         ServerMetaDataRegistryService serverMetaDataRegistryService = newServerMetaDataRegistryService();
         bind(ServerMetaDataRegistryService.class).toInstance(serverMetaDataRegistryService);
 
-        bind(PluginLoader.class).toInstance(new ServerPluginLoader(ClassLoaderUtils.getDefaultClassLoader()));
+        ClassLoader defaultClassLoader = ClassLoaderUtils.getDefaultClassLoader();
+        bind(ClassLoader.class).annotatedWith(PluginClassLoader.class).toInstance(defaultClassLoader);
+        bind(PluginSetup.class).toProvider(MockPluginSetupProvider.class).in(Scopes.SINGLETON);
+        bind(ProfilerPluginContextLoader.class).toProvider(MockProfilerPluginContextLoaderProvider.class).in(Scopes.SINGLETON);
         bind(PluginContextLoadResult.class).toProvider(MockPluginContextLoadResultProvider.class).in(Scopes.SINGLETON);
     }
 
@@ -84,9 +68,4 @@ public class MockApplicationContextModule extends AbstractModule {
         return serverMetaDataRegistryService;
     }
 
-    protected StorageFactory newStorageFactory(DataSender spanDataSender) {
-        logger.debug("newStorageFactory dataSender:{}", spanDataSender);
-        StorageFactory storageFactory = new SimpleSpanStorageFactory(spanDataSender);
-        return storageFactory;
-    }
 }

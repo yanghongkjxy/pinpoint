@@ -201,6 +201,18 @@ public class TestAgentStatFactory {
                 10L,
                 100L,
                 numValues);
+        List<Long> skippedNewCount = TestAgentStatDataPointFactory.LONG.createFluctuatingValues(
+                100L,
+                10000L,
+                10L,
+                100L,
+                numValues);
+        List<Long> skippedContinuationCount = TestAgentStatDataPointFactory.LONG.createFluctuatingValues(
+                100L,
+                10000L,
+                10L,
+                100L,
+                numValues);
         for (int i = 0; i < numValues; i++) {
             TransactionBo transactionBo = new TransactionBo();
             transactionBo.setAgentId(agentId);
@@ -211,6 +223,8 @@ public class TestAgentStatFactory {
             transactionBo.setSampledContinuationCount(sampledContinuationCounts.get(i));
             transactionBo.setUnsampledNewCount(unsampledNewCount.get(i));
             transactionBo.setUnsampledContinuationCount(unsampledContinuationCount.get(i));
+            transactionBo.setSkippedNewSkipCount(skippedNewCount.get(i));
+            transactionBo.setSkippedContinuationCount(skippedContinuationCount.get(i));
             transactionBos.add(transactionBo);
         }
         return transactionBos;
@@ -276,26 +290,26 @@ public class TestAgentStatFactory {
         return responseTimeBos;
     }
 
-    public static List<DeadlockBo> createDeadlockBos(String agentId, long startTimestamp, long initialTimestamp) {
+    public static List<DeadlockThreadCountBo> createDeadlockBos(String agentId, long startTimestamp, long initialTimestamp) {
         final int numValues = RandomUtils.nextInt(1, MAX_NUM_TEST_VALUES);
         return createDeadlockBos(agentId, startTimestamp, initialTimestamp, numValues);
     }
 
-    public static List<DeadlockBo> createDeadlockBos(String agentId, long startTimestamp, long initialTimestamp, int numValues) {
-        List<DeadlockBo> deadlockBos = new ArrayList<DeadlockBo>(numValues);
+    public static List<DeadlockThreadCountBo> createDeadlockBos(String agentId, long startTimestamp, long initialTimestamp, int numValues) {
+        List<DeadlockThreadCountBo> deadlockThreadCountBos = new ArrayList<DeadlockThreadCountBo>(numValues);
         List<Long> startTimestamps = createStartTimestamps(startTimestamp, numValues);
         List<Long> timestamps = createTimestamps(initialTimestamp, numValues);
         List<Integer> deadlockCounts = TestAgentStatDataPointFactory.INTEGER.createRandomValues(0, 1000, numValues);
         for (int i = 0; i < numValues; i++) {
-            DeadlockBo deadlockBo = new DeadlockBo();
-            deadlockBo.setAgentId(agentId);
-            deadlockBo.setStartTimestamp(startTimestamps.get(i));
-            deadlockBo.setTimestamp(timestamps.get(i));
-            deadlockBo.setDeadlockedThreadCount(deadlockCounts.get(i));
+            DeadlockThreadCountBo deadlockThreadCountBo = new DeadlockThreadCountBo();
+            deadlockThreadCountBo.setAgentId(agentId);
+            deadlockThreadCountBo.setStartTimestamp(startTimestamps.get(i));
+            deadlockThreadCountBo.setTimestamp(timestamps.get(i));
+            deadlockThreadCountBo.setDeadlockedThreadCount(deadlockCounts.get(i));
 
-            deadlockBos.add(deadlockBo);
+            deadlockThreadCountBos.add(deadlockThreadCountBo);
         }
-        return deadlockBos;
+        return deadlockThreadCountBos;
     }
 
     private static final int MIN_VALUE_OF_MAX_CONNECTION_SIZE = 20;

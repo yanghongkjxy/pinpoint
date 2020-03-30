@@ -16,7 +16,6 @@
 
 package com.navercorp.pinpoint.web.cluster;
 
-import com.navercorp.pinpoint.io.request.EmptyMessage;
 import com.navercorp.pinpoint.io.request.Message;
 import com.navercorp.pinpoint.thrift.dto.command.TCommandTransferResponse;
 import com.navercorp.pinpoint.thrift.dto.command.TRouteResult;
@@ -35,6 +34,7 @@ public class DefaultPinpointRouteResponse implements PinpointRouteResponse {
 
     private TRouteResult routeResult;
     private TBase response;
+    private String message;
 
     private boolean isParsed;
 
@@ -49,7 +49,7 @@ public class DefaultPinpointRouteResponse implements PinpointRouteResponse {
                 return;
             }
 
-            TBase<?, ?> object = deserialize(commandDeserializerFactory, payload, EmptyMessage.emptyMessage());
+            TBase<?, ?> object = deserialize(commandDeserializerFactory, payload, null);
 
             if (object == null) {
                 routeResult = TRouteResult.NOT_SUPPORTED_RESPONSE;
@@ -62,7 +62,8 @@ public class DefaultPinpointRouteResponse implements PinpointRouteResponse {
                     this.routeResult = routeResult;
                 }
 
-                response = deserialize(commandDeserializerFactory, commandResponse.getPayload(), EmptyMessage.emptyMessage());
+                response = deserialize(commandDeserializerFactory, commandResponse.getPayload(), null);
+                message = commandResponse.getMessage();
             } else {
                 routeResult = TRouteResult.UNKNOWN;
                 response = object;
@@ -81,6 +82,11 @@ public class DefaultPinpointRouteResponse implements PinpointRouteResponse {
     public TBase getResponse() {
         assertParsed();
         return response;
+    }
+
+    @Override
+    public String getMessage() {
+        return message;
     }
 
     @Override
@@ -112,8 +118,11 @@ public class DefaultPinpointRouteResponse implements PinpointRouteResponse {
     }
 
     private TBase<?, ?> deserialize(DeserializerFactory<HeaderTBaseDeserializer> commandDeserializerFactory, byte[] objectData, Message<TBase<?, ?>> defaultValue) {
-        Message<TBase<?, ?>> deserialize = SerializationUtils.deserialize(objectData, commandDeserializerFactory, defaultValue);
-        return deserialize.getData();
+        final Message<TBase<?, ?>> message = SerializationUtils.deserialize(objectData, commandDeserializerFactory, defaultValue);
+        if (message == null) {
+            return null;
+        }
+        return message.getData();
     }
 
 

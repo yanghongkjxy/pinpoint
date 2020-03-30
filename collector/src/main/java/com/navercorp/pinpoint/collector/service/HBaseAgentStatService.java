@@ -20,7 +20,7 @@ import com.navercorp.pinpoint.common.server.bo.stat.ActiveTraceBo;
 import com.navercorp.pinpoint.common.server.bo.stat.AgentStatBo;
 import com.navercorp.pinpoint.common.server.bo.stat.CpuLoadBo;
 import com.navercorp.pinpoint.common.server.bo.stat.DataSourceListBo;
-import com.navercorp.pinpoint.common.server.bo.stat.DeadlockBo;
+import com.navercorp.pinpoint.common.server.bo.stat.DeadlockThreadCountBo;
 import com.navercorp.pinpoint.common.server.bo.stat.DirectBufferBo;
 import com.navercorp.pinpoint.common.server.bo.stat.FileDescriptorBo;
 import com.navercorp.pinpoint.common.server.bo.stat.JvmGcBo;
@@ -32,6 +32,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Objects;
+
 /**
  * @author minwoo.jung
  */
@@ -40,35 +42,47 @@ public class HBaseAgentStatService implements AgentStatService {
 
     private final Logger logger = LoggerFactory.getLogger(HBaseAgentStatService.class.getName());
 
-    @Autowired
-    private AgentStatDaoV2<JvmGcBo> jvmGcDao;
+    private final AgentStatDaoV2<JvmGcBo> jvmGcDao;
 
-    @Autowired
-    private AgentStatDaoV2<JvmGcDetailedBo> jvmGcDetailedDao;
+    private final AgentStatDaoV2<JvmGcDetailedBo> jvmGcDetailedDao;
 
-    @Autowired
-    private AgentStatDaoV2<CpuLoadBo> cpuLoadDao;
+    private final AgentStatDaoV2<CpuLoadBo> cpuLoadDao;
 
-    @Autowired
-    private AgentStatDaoV2<TransactionBo> transactionDao;
+    private final AgentStatDaoV2<TransactionBo> transactionDao;
 
-    @Autowired
-    private AgentStatDaoV2<ActiveTraceBo> activeTraceDao;
+    private final AgentStatDaoV2<ActiveTraceBo> activeTraceDao;
 
-    @Autowired
-    private AgentStatDaoV2<DataSourceListBo> dataSourceListDao;
+    private final AgentStatDaoV2<DataSourceListBo> dataSourceListDao;
 
-    @Autowired
-    private AgentStatDaoV2<ResponseTimeBo> responseTimeDao;
+    private final AgentStatDaoV2<ResponseTimeBo> responseTimeDao;
 
-    @Autowired
-    private AgentStatDaoV2<DeadlockBo> deadlockDao;
+    private final AgentStatDaoV2<DeadlockThreadCountBo> deadlockDao;
 
-    @Autowired
-    private AgentStatDaoV2<FileDescriptorBo> fileDescriptorDao;
+    private final AgentStatDaoV2<FileDescriptorBo> fileDescriptorDao;
 
-    @Autowired
-    private AgentStatDaoV2<DirectBufferBo> directBufferDao;
+    private final AgentStatDaoV2<DirectBufferBo> directBufferDao;
+
+    public HBaseAgentStatService(AgentStatDaoV2<JvmGcBo> jvmGcDao,
+                                 AgentStatDaoV2<JvmGcDetailedBo> jvmGcDetailedDao,
+                                 AgentStatDaoV2<CpuLoadBo> cpuLoadDao,
+                                 AgentStatDaoV2<TransactionBo> transactionDao,
+                                 AgentStatDaoV2<ActiveTraceBo> activeTraceDao,
+                                 AgentStatDaoV2<DataSourceListBo> dataSourceListDao,
+                                 AgentStatDaoV2<ResponseTimeBo> responseTimeDao,
+                                 AgentStatDaoV2<DeadlockThreadCountBo> deadlockDao,
+                                 AgentStatDaoV2<FileDescriptorBo> fileDescriptorDao,
+                                 AgentStatDaoV2<DirectBufferBo> directBufferDao) {
+        this.jvmGcDao = Objects.requireNonNull(jvmGcDao, "jvmGcDao");
+        this.jvmGcDetailedDao = Objects.requireNonNull(jvmGcDetailedDao, "jvmGcDetailedDao");
+        this.cpuLoadDao = Objects.requireNonNull(cpuLoadDao, "cpuLoadDao");
+        this.transactionDao = Objects.requireNonNull(transactionDao, "transactionDao");
+        this.activeTraceDao = Objects.requireNonNull(activeTraceDao, "activeTraceDao");
+        this.dataSourceListDao = Objects.requireNonNull(dataSourceListDao, "dataSourceListDao");
+        this.responseTimeDao = Objects.requireNonNull(responseTimeDao, "responseTimeDao");
+        this.deadlockDao = Objects.requireNonNull(deadlockDao, "deadlockDao");
+        this.fileDescriptorDao = Objects.requireNonNull(fileDescriptorDao, "fileDescriptorDao");
+        this.directBufferDao = Objects.requireNonNull(directBufferDao, "directBufferDao");
+    }
 
     @Override
     public void save(AgentStatBo agentStatBo) {
@@ -81,7 +95,7 @@ public class HBaseAgentStatService implements AgentStatService {
             this.activeTraceDao.insert(agentId, agentStatBo.getActiveTraceBos());
             this.dataSourceListDao.insert(agentId, agentStatBo.getDataSourceListBos());
             this.responseTimeDao.insert(agentId, agentStatBo.getResponseTimeBos());
-            this.deadlockDao.insert(agentId, agentStatBo.getDeadlockBos());
+            this.deadlockDao.insert(agentId, agentStatBo.getDeadlockThreadCountBos());
             this.fileDescriptorDao.insert(agentId, agentStatBo.getFileDescriptorBos());
             this.directBufferDao.insert(agentId, agentStatBo.getDirectBufferBos());
         } catch (Exception e) {

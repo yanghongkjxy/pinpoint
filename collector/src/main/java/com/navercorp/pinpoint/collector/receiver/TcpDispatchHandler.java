@@ -1,11 +1,11 @@
 /*
- * Copyright 2018 NAVER Corp.
+ * Copyright 2019 NAVER Corp.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,16 +16,13 @@
 
 package com.navercorp.pinpoint.collector.receiver;
 
-import com.navercorp.pinpoint.collector.handler.AgentInfoHandler;
+import com.navercorp.pinpoint.collector.handler.SimpleAndRequestResponseHandler;
 import com.navercorp.pinpoint.collector.handler.RequestResponseHandler;
 import com.navercorp.pinpoint.collector.handler.SimpleHandler;
 import com.navercorp.pinpoint.io.header.Header;
 import com.navercorp.pinpoint.io.request.ServerRequest;
 import com.navercorp.pinpoint.io.request.ServerResponse;
 import com.navercorp.pinpoint.thrift.io.DefaultTBaseLocator;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-
 
 /**
  * @author emeroad
@@ -33,26 +30,20 @@ import org.springframework.beans.factory.annotation.Qualifier;
  */
 public class TcpDispatchHandler implements DispatchHandler {
 
-    @Autowired()
-    @Qualifier("agentInfoHandler")
-    private AgentInfoHandler agentInfoHandler;
+    private final SimpleAndRequestResponseHandler agentInfoHandler;
 
-    @Autowired()
-    @Qualifier("sqlMetaDataHandler")
-    private RequestResponseHandler sqlMetaDataHandler;
+    private final RequestResponseHandler sqlMetaDataHandler;
 
-    @Autowired()
-    @Qualifier("apiMetaDataHandler")
-    private RequestResponseHandler apiMetaDataHandler;
+    private final RequestResponseHandler apiMetaDataHandler;
 
-    @Autowired()
-    @Qualifier("stringMetaDataHandler")
-    private RequestResponseHandler stringMetaDataHandler;
+    private final RequestResponseHandler stringMetaDataHandler;
 
-
-    public TcpDispatchHandler() {
+    public TcpDispatchHandler(final SimpleAndRequestResponseHandler agentInfoHandler, final RequestResponseHandler sqlMetaDataHandler, final RequestResponseHandler apiMetaDataHandler, final RequestResponseHandler stringMetaDataHandler) {
+        this.agentInfoHandler = agentInfoHandler;
+        this.sqlMetaDataHandler = sqlMetaDataHandler;
+        this.apiMetaDataHandler = apiMetaDataHandler;
+        this.stringMetaDataHandler = stringMetaDataHandler;
     }
-
 
     protected RequestResponseHandler getRequestResponseHandler(ServerRequest serverRequest) {
         final Header header = serverRequest.getHeader();
@@ -93,5 +84,4 @@ public class TcpDispatchHandler implements DispatchHandler {
         RequestResponseHandler requestResponseHandler = getRequestResponseHandler(serverRequest);
         requestResponseHandler.handleRequest(serverRequest, serverResponse);
     }
-
 }

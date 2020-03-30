@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,30 +17,26 @@
 package com.navercorp.pinpoint.profiler.monitor.collector.filedescriptor;
 
 
+import com.navercorp.pinpoint.common.util.Assert;
+import com.navercorp.pinpoint.profiler.monitor.collector.AgentStatMetricCollector;
 import com.navercorp.pinpoint.profiler.monitor.metric.filedescriptor.FileDescriptorMetric;
 import com.navercorp.pinpoint.profiler.monitor.metric.filedescriptor.FileDescriptorMetricSnapshot;
-import com.navercorp.pinpoint.thrift.dto.TFileDescriptor;
 
 /**
  * @author Roy Kim
  */
-public class DefaultFileDescriptorMetricCollector implements FileDescriptorMetricCollector {
+public class DefaultFileDescriptorMetricCollector implements AgentStatMetricCollector<FileDescriptorMetricSnapshot> {
 
     private final FileDescriptorMetric fileDescriptorMetric;
 
     public DefaultFileDescriptorMetricCollector(FileDescriptorMetric fileDescriptorMetric) {
-        if (fileDescriptorMetric == null) {
-            throw new NullPointerException("fileDescriptorMetric must not be null");
-        }
-        this.fileDescriptorMetric = fileDescriptorMetric;
+        this.fileDescriptorMetric = Assert.requireNonNull(fileDescriptorMetric, "fileDescriptorMetric");
     }
 
     @Override
-    public TFileDescriptor collect() {
-        TFileDescriptor tfileDescriptor = new TFileDescriptor();
-        FileDescriptorMetricSnapshot snapshot = fileDescriptorMetric.getSnapshot();
-        tfileDescriptor.setOpenFileDescriptorCount(snapshot.getOpenFileDescriptorCount());
-        return tfileDescriptor;
+    public FileDescriptorMetricSnapshot collect() {
+        final FileDescriptorMetricSnapshot snapshot = fileDescriptorMetric.getSnapshot();
+        return snapshot;
     }
 
     @Override

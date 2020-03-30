@@ -16,23 +16,23 @@
 
 package com.navercorp.pinpoint.thrift.io;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import com.navercorp.pinpoint.io.header.ByteArrayHeaderReader;
 import com.navercorp.pinpoint.io.header.Header;
+import com.navercorp.pinpoint.io.header.HeaderEntity;
 import com.navercorp.pinpoint.io.header.HeaderReader;
 import com.navercorp.pinpoint.io.header.InvalidHeaderException;
 import com.navercorp.pinpoint.io.request.DefaultMessage;
 import com.navercorp.pinpoint.io.request.Message;
-import com.navercorp.pinpoint.io.request.ServerRequest;
 import com.navercorp.pinpoint.io.util.TypeLocator;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.transport.TMemoryInputTransport;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Deserialize chunked packets 
@@ -86,13 +86,18 @@ public class ChunkHeaderTBaseDeserializer {
     }
 
     private Message<TBase<?, ?>> readInternal() throws TException {
-        Header header = readHeader();
+        final HeaderReader reader = newHeaderReader();
+        final Header header = readHeader(reader);
+        final HeaderEntity headerEntity = readHeaderEntity(reader, header);
+        skipHeaderOffset(reader);
+
+
         final TBase<?, ?> base = locator.bodyLookup(header.getType());
         if (base == null) {
             throw new TException("base must not be null type:" + header.getType());
         }
         base.read(protocol);
-        return new DefaultMessage<TBase<?, ?>>(header, base);
+        return new DefaultMessage<TBase<?, ?>>(header, headerEntity, base);
     }
 
     private Header readHeader() throws TException {
@@ -119,6 +124,14 @@ public class ChunkHeaderTBaseDeserializer {
             return reader.readHeader();
         } catch (InvalidHeaderException e) {
             throw new TException("invalid header Caused by:" + e.getMessage(), e);
+        }
+    }
+
+    private HeaderEntity readHeaderEntity(HeaderReader reader, Header header) throws TException {
+        try {
+            return reader.readHeaderEntity(header);
+        } catch (InvalidHeaderException e) {
+            throw new TException("invalid headerEntity Caused by:" + e.getMessage(), e);
         }
     }
 

@@ -16,15 +16,17 @@
 package com.navercorp.pinpoint.web.dao.hbase;
 
 import com.navercorp.pinpoint.common.server.bo.codec.stat.join.ActiveTraceDecoder;
+import com.navercorp.pinpoint.common.server.bo.stat.join.JoinActiveTraceBo;
 import com.navercorp.pinpoint.common.server.bo.stat.join.StatType;
 import com.navercorp.pinpoint.web.dao.ApplicationActiveTraceDao;
 import com.navercorp.pinpoint.web.mapper.stat.ApplicationStatMapper;
 import com.navercorp.pinpoint.web.mapper.stat.SampledApplicationStatResultExtractor;
-import com.navercorp.pinpoint.web.mapper.stat.sampling.sampler.JoinActiveTraceSampler;
+import com.navercorp.pinpoint.web.mapper.stat.sampling.sampler.ApplicationStatSampler;
 import com.navercorp.pinpoint.web.util.TimeWindow;
 import com.navercorp.pinpoint.web.vo.Range;
 import com.navercorp.pinpoint.web.vo.stat.AggreJoinActiveTraceBo;
 import com.navercorp.pinpoint.web.vo.stat.AggregationStatData;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -41,7 +43,7 @@ public class HbaseApplicationActiveTraceDao implements ApplicationActiveTraceDao
     private ActiveTraceDecoder activeTraceDecoder;
 
     @Autowired
-    private JoinActiveTraceSampler activeTraceSampler;
+    private ApplicationStatSampler<JoinActiveTraceBo> activeTraceSampler;
 
     @Autowired
     private HbaseApplicationStatDaoOperations operations;

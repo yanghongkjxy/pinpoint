@@ -1,11 +1,11 @@
 /*
- * Copyright 2018 NAVER Corp.
+ * Copyright 2019 NAVER Corp.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,20 +16,12 @@
 
 package com.navercorp.pinpoint.collector.receiver;
 
-import com.navercorp.pinpoint.collector.handler.AgentEventHandler;
-import com.navercorp.pinpoint.collector.handler.AgentStatHandlerV2;
 import com.navercorp.pinpoint.collector.handler.SimpleHandler;
 import com.navercorp.pinpoint.collector.handler.SimpleDualHandler;
 import com.navercorp.pinpoint.io.header.Header;
 import com.navercorp.pinpoint.io.request.ServerRequest;
 import com.navercorp.pinpoint.io.request.ServerResponse;
 import com.navercorp.pinpoint.thrift.io.DefaultTBaseLocator;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * @author emeroad
@@ -37,15 +29,14 @@ import java.util.List;
  */
 public class StatDispatchHandler implements DispatchHandler {
 
-    @Autowired
-    private AgentStatHandlerV2 agentStatHandler;
+    private final SimpleHandler agentStatHandler;
 
-    @Autowired
-    private AgentEventHandler agentEventHandler;
+    private final SimpleHandler agentEventHandler;
 
 
-    public StatDispatchHandler() {
-
+    public StatDispatchHandler(SimpleHandler agentStatHandler, SimpleHandler agentEventHandler) {
+        this.agentStatHandler = agentStatHandler;
+        this.agentEventHandler = agentEventHandler;
     }
 
     private SimpleHandler getSimpleHandler(Header header) {

@@ -15,9 +15,9 @@
  */
 package com.navercorp.pinpoint.collector.cluster.flink;
 
-import com.navercorp.pinpoint.collector.service.SendAgentStatService;
+import com.navercorp.pinpoint.collector.sender.FlinkTcpDataSender;
+import com.navercorp.pinpoint.collector.service.SendDataToFlinkService;
 import com.navercorp.pinpoint.collector.util.Address;
-import com.navercorp.pinpoint.profiler.sender.TcpDataSender;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -30,33 +30,33 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class TcpDataSenderRepository {
     private final ConcurrentHashMap<Address, SenderContext> clusterConnectionRepository = new ConcurrentHashMap<>();
-    private final SendAgentStatService sendAgentStatService;
+    private final SendDataToFlinkService sendDataToFlinkService;
 
-    TcpDataSenderRepository(SendAgentStatService sendAgentStatService) {
-        this.sendAgentStatService = sendAgentStatService;
+    TcpDataSenderRepository(SendDataToFlinkService sendDataToFlinkService) {
+        this.sendDataToFlinkService = sendDataToFlinkService;
     }
 
     public SenderContext putIfAbsent(Address address, SenderContext senderContext) {
         SenderContext context =  clusterConnectionRepository.putIfAbsent(address, senderContext);
-        replaceDataInsendAgentStatService();
+        replaceDataInSendDataToFlinkService();
         return context;
     }
 
     public SenderContext remove(Address address) {
         SenderContext senderContext = clusterConnectionRepository.remove(address);
-        replaceDataInsendAgentStatService();
+        replaceDataInSendDataToFlinkService();
         return senderContext;
     }
 
-    private void replaceDataInsendAgentStatService() {
+    private void replaceDataInSendDataToFlinkService() {
         Collection<SenderContext> values = clusterConnectionRepository.values();
 
-        List<TcpDataSender> tcpDataSenderList = new ArrayList<>(values.size());
+        List<FlinkTcpDataSender> tcpDataSenderList = new ArrayList<>(values.size());
         for (SenderContext senderContext : values) {
-            tcpDataSenderList.add(senderContext.getTcpDataSender());
+            tcpDataSenderList.add(senderContext.getFlinkTcpDataSender());
         }
 
-        sendAgentStatService.replaceFlinkServerList(tcpDataSenderList);
+        sendDataToFlinkService.replaceFlinkTcpDataSenderList(tcpDataSenderList);
     }
 
     public boolean containsKey(Address address) {

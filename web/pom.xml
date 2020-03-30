@@ -1,5 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2018 NAVER Corp.
+  ~ Copyright 2019 NAVER Corp.
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -20,7 +21,7 @@
     <parent>
         <groupId>com.navercorp.pinpoint</groupId>
         <artifactId>pinpoint</artifactId>
-        <version>1.8.0-SNAPSHOT</version>
+        <version>2.0.2-SNAPSHOT</version>
     </parent>
 
     <artifactId>pinpoint-web</artifactId>
@@ -30,10 +31,11 @@
     <properties>
         <jdk.version>1.8</jdk.version>
         <jdk.home>${env.JAVA_8_HOME}</jdk.home>
-        <maven.build.timestamp.format>yyyyMMddHHmmss</maven.build.timestamp.format>
         <sniffer.artifactid>java18</sniffer.artifactid>
-        <fastxml.jackson.version>2.8.10</fastxml.jackson.version>
         <grunt.build.command>build_release_without_lint</grunt.build.command>
+
+        <!-- java back-end development option -->
+        <build.frontend.skip>false</build.frontend.skip>
     </properties>
 
     <dependencies>
@@ -59,8 +61,17 @@
         </dependency>
         <dependency>
             <groupId>com.navercorp.pinpoint</groupId>
-            <artifactId>pinpoint-plugins</artifactId>
+            <artifactId>pinpoint-plugins-assembly</artifactId>
             <type>pom</type>
+        </dependency>
+        <dependency>
+            <groupId>com.navercorp.pinpoint</groupId>
+            <artifactId>pinpoint-agent-plugins</artifactId>
+            <type>pom</type>
+        </dependency>
+        <dependency>
+            <groupId>com.navercorp.pinpoint</groupId>
+            <artifactId>pinpoint-grpc</artifactId>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -164,7 +175,7 @@
             <artifactId>spring-messaging</artifactId>
             <version>${spring.version}</version>
         </dependency>
-        
+
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-web</artifactId>
@@ -257,26 +268,15 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- for sms platform dependencies -->
         <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-            <exclusions>
-                <exclusion>
-                    <artifactId>commons-logging</artifactId>
-                    <groupId>commons-logging</groupId>
-                </exclusion>
-            </exclusions>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.11</version>
         </dependency>
+
         <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpcore</artifactId>
-            <exclusions>
-                <exclusion>
-                    <artifactId>commons-logging</artifactId>
-                    <groupId>commons-logging</groupId>
-                </exclusion>
-            </exclusions>
+            <groupId>javax.mail</groupId>
+            <artifactId>mail</artifactId>
         </dependency>
 
         <!-- Test dependencies -->
@@ -326,59 +326,37 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>com.navercorp.pinpoint</groupId>
+            <artifactId>pinpoint-rpc</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
-        <resources>
-            <resource>
-                <directory>${basedir}/src/main/java</directory>
-                <excludes>
-                    <exclude>**/*.java</exclude>
-                </excludes>
-            </resource>
-            <resource>
-                <directory>${basedir}/src/main/resources</directory>
-            </resource>
-            <resource>
-                <directory>${basedir}/src/main/resources-${env}</directory>
-            </resource>
-        </resources>
-
         <plugins>
+            <!-- build.frontend -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-war-plugin</artifactId>
-                <configuration>
-                    <attachClasses>true</attachClasses>
-                    <webResources>
-                        <resource>
-                            <directory>target/main/webapp</directory>
-                        </resource>
-                    </webResources>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <version>1.8</version>
+                <artifactId>maven-assembly-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>prepare-grunt</id>
+                        <id>build-frontend-source</id>
+                        <phase>package</phase>
                         <goals>
-                            <goal>run</goal>
+                            <goal>single</goal>
                         </goals>
-                        <phase>generate-resources</phase>
                         <configuration>
-                            <target>
-                                <copy todir="${basedir}/target/grunt" failonerror="true" verbose="true">
-                                    <fileset dir="${basedir}/src/grunt" />
-                                </copy>
-                                <copy todir="${basedir}/target/main/webapp" failonerror="true" verbose="true">
-                                    <fileset dir="${basedir}/src/main/webapp" />
-                                </copy>
-                                <copy file="${basedir}/src/Gruntfile.js" tofile="${basedir}/target/Gruntfile.js" failonerror="true" verbose="true" />
-                                <copy file="${basedir}/src/package.json" tofile="${basedir}/target/package.json" failonerror="true" verbose="true" />
-                            </target>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                            <appendAssemblyId>true</appendAssemblyId>
+                            <descriptors>
+                                <descriptor>src/assembly/frontend.xml</descriptor>
+                            </descriptors>
+                            <attach>true</attach>
+                            <skipAssembly>${build.frontend.skip}</skipAssembly>
                         </configuration>
                     </execution>
                 </executions>
@@ -386,26 +364,27 @@
             <plugin>
                 <groupId>com.github.eirslett</groupId>
                 <artifactId>frontend-maven-plugin</artifactId>
-                <version>1.0</version>
+                <version>${plugin.frontend.version}</version>
                 <configuration>
-                    <workingDirectory>${basedir}/target</workingDirectory>
-                    <srcdir>${basedir}/target/main/webapp</srcdir>
-                    <outputdir>${basedir}/target/main/webapp</outputdir>
-                    <installDirectory>target</installDirectory>
+                    <installDirectory>${project.parent.basedir}/${plugin.frontend.node.install.dir}</installDirectory>
+                    <workingDirectory>${basedir}/src/main/angular</workingDirectory>
+                    <skip>${build.frontend.skip}</skip>
                 </configuration>
                 <executions>
                     <execution>
                         <id>install node and npm</id>
+                        <phase>prepare-package</phase>
                         <goals>
                             <goal>install-node-and-npm</goal>
                         </goals>
                         <configuration>
-                            <nodeVersion>v5.11.1</nodeVersion>
-                            <npmVersion>3.9.6</npmVersion>
+                            <nodeVersion>${plugin.frontend.node.version}</nodeVersion>
+                            <npmVersion>${plugin.frontend.npm.version}</npmVersion>
                         </configuration>
                     </execution>
                     <execution>
                         <id>npm install</id>
+                        <phase>prepare-package</phase>
                         <goals>
                             <goal>npm</goal>
                         </goals>
@@ -414,12 +393,13 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>grunt build</id>
+                        <id>npm run build</id>
+                        <phase>prepare-package</phase>
                         <goals>
-                            <goal>grunt</goal>
+                            <goal>npm</goal>
                         </goals>
                         <configuration>
-                            <arguments>${grunt.build.command}</arguments>
+                            <arguments>run build:real</arguments>
                         </configuration>
                     </execution>
                 </executions>
@@ -456,6 +436,44 @@
                                 <goals>
                                     <goal>shutdown</goal>
                                 </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>forceclean</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-clean-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>node-clean</id>
+                                <phase>clean</phase>
+                                <goals>
+                                    <goal>clean</goal>
+                                </goals>
+                                <configuration>
+                                    <filesets>
+                                        <fileset>
+                                            <directory>${project.parent.basedir}/${plugin.frontend.node.install.dir}</directory>
+                                            <includes>
+                                                <include>**</include>
+                                            </includes>
+                                        </fileset>
+                                        <fileset>
+                                            <directory>${basedir}/src/main/angular/node_modules</directory>
+                                            <includes>
+                                                <include>**</include>
+                                            </includes>
+                                        </fileset>
+                                    </filesets>
+                                </configuration>
                             </execution>
                         </executions>
                     </plugin>

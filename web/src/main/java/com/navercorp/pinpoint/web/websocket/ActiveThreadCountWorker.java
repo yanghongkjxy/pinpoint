@@ -16,18 +16,14 @@
 
 package com.navercorp.pinpoint.web.websocket;
 
-import com.navercorp.pinpoint.io.request.EmptyMessage;
 import com.navercorp.pinpoint.rpc.packet.stream.StreamClosePacket;
 import com.navercorp.pinpoint.rpc.packet.stream.StreamCode;
-import com.navercorp.pinpoint.rpc.packet.stream.StreamCreateFailPacket;
 import com.navercorp.pinpoint.rpc.packet.stream.StreamResponsePacket;
 import com.navercorp.pinpoint.rpc.stream.ClientStreamChannel;
-import com.navercorp.pinpoint.rpc.stream.ClientStreamChannelContext;
-import com.navercorp.pinpoint.rpc.stream.ClientStreamChannelMessageListener;
-import com.navercorp.pinpoint.rpc.stream.LoggingStreamChannelMessageListener;
+import com.navercorp.pinpoint.rpc.stream.ClientStreamChannelEventHandler;
 import com.navercorp.pinpoint.rpc.stream.StreamChannel;
-import com.navercorp.pinpoint.rpc.stream.StreamChannelStateChangeEventHandler;
 import com.navercorp.pinpoint.rpc.stream.StreamChannelStateCode;
+import com.navercorp.pinpoint.rpc.stream.StreamException;
 import com.navercorp.pinpoint.thrift.dto.command.TCmdActiveThreadCount;
 import com.navercorp.pinpoint.thrift.dto.command.TCommandTransferResponse;
 import com.navercorp.pinpoint.thrift.dto.command.TRouteResult;
@@ -35,6 +31,7 @@ import com.navercorp.pinpoint.web.service.AgentService;
 import com.navercorp.pinpoint.web.vo.AgentActiveThreadCount;
 import com.navercorp.pinpoint.web.vo.AgentActiveThreadCountFactory;
 import com.navercorp.pinpoint.web.vo.AgentInfo;
+
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
 import org.slf4j.Logger;
@@ -47,7 +44,6 @@ import java.util.Objects;
  */
 public class ActiveThreadCountWorker implements PinpointWebSocketHandlerWorker {
 
-    private static final ClientStreamChannelMessageListener LOGGING = LoggingStreamChannelMessageListener.CLIENT_LISTENER;
     private static final TCmdActiveThreadCount COMMAND_INSTANCE = new TCmdActiveThreadCount();
 
     private static final ActiveThreadCountErrorType INTERNAL_ERROR = ActiveThreadCountErrorType.PINPOINT_INTERNAL_ERROR;
@@ -65,8 +61,7 @@ public class ActiveThreadCountWorker implements PinpointWebSocketHandlerWorker {
     private final AgentActiveThreadCountFactory failResponseFactory;
     private volatile AgentActiveThreadCount defaultFailResponse;
 
-    private final MessageListener messageListener;
-    private final StateChangeListener stateChangeListener;
+    private final EventHandler eventHandler = new EventHandler();
 
     private volatile boolean started = false;
     private volatile boolean active = false;
@@ -79,12 +74,12 @@ public class ActiveThreadCountWorker implements PinpointWebSocketHandlerWorker {
     }
 
     public ActiveThreadCountWorker(AgentService agentService, String applicationName, String agentId, PinpointWebSocketResponseAggregator webSocketResponseAggregator, WorkerActiveManager workerActiveManager) {
-        this.agentService = Objects.requireNonNull(agentService, "agentService must not be null");
-        this.applicationName = Objects.requireNonNull(applicationName, "applicationName must not be null");
-        this.agentId = Objects.requireNonNull(agentId, "agentId must not be null");
+        this.agentService = Objects.requireNonNull(agentService, "agentService");
+        this.applicationName = Objects.requireNonNull(applicationName, "applicationName");
+        this.agentId = Objects.requireNonNull(agentId, "agentId");
 
-        this.responseAggregator = Objects.requireNonNull(webSocketResponseAggregator, "responseAggregator must not be null");
-        this.workerActiveManager = Objects.requireNonNull(workerActiveManager, "workerActiveManager must not be null");
+        this.responseAggregator = Objects.requireNonNull(webSocketResponseAggregator, "responseAggregator");
+        this.workerActiveManager = Objects.requireNonNull(workerActiveManager, "workerActiveManager");
 
         AgentActiveThreadCountFactory failResponseFactory = new AgentActiveThreadCountFactory();
         failResponseFactory.setAgentId(agentId);
@@ -92,9 +87,6 @@ public class ActiveThreadCountWorker implements PinpointWebSocketHandlerWorker {
         this.failResponseFactory = failResponseFactory;
 
         this.defaultFailResponse = failResponseFactory.createFail(INTERNAL_ERROR.getMessage());
-
-        this.messageListener = new MessageListener();
-        this.stateChangeListener = new StateChangeListener();
     }
 
     @Override
@@ -153,27 +145,20 @@ public class ActiveThreadCountWorker implements PinpointWebSocketHandlerWorker {
 
     private boolean active0(AgentInfo agentInfo) {
         synchronized (lock) {
-            boolean active = false;
             try {
-                ClientStreamChannelContext clientStreamChannelContext = agentService.openStream(agentInfo, COMMAND_INSTANCE, messageListener, stateChangeListener);
-                if (clientStreamChannelContext == null) {
-                    setDefaultErrorMessage(StreamCode.CONNECTION_NOT_FOUND.name());
+                streamChannel = agentService.openStream(agentInfo, COMMAND_INSTANCE, eventHandler);
+                setDefaultErrorMessage(TRouteResult.TIMEOUT.name());
+                return true;
+            } catch (StreamException streamException) {
+                StreamCode streamCode = streamException.getStreamCode();
+                if (streamCode == StreamCode.CONNECTION_NOT_FOUND) {
                     workerActiveManager.addReactiveWorker(agentInfo);
-                } else {
-                    if (clientStreamChannelContext.getCreateFailPacket() == null) {
-                        streamChannel = clientStreamChannelContext.getStreamChannel();
-                        setDefaultErrorMessage(TRouteResult.TIMEOUT.name());
-                        active = true;
-                    } else {
-                        StreamCreateFailPacket createFailPacket = clientStreamChannelContext.getCreateFailPacket();
-                        setDefaultErrorMessage(createFailPacket.getCode().name());
-                    }
                 }
+                setDefaultErrorMessage(streamCode.name());
             } catch (TException exception) {
                 setDefaultErrorMessage(TRouteResult.NOT_SUPPORTED_REQUEST.name());
             }
-
-            return active;
+            return false;
         }
     }
 
@@ -207,47 +192,34 @@ public class ActiveThreadCountWorker implements PinpointWebSocketHandlerWorker {
         return defaultFailResponse;
     }
 
-    private class MessageListener implements ClientStreamChannelMessageListener {
+
+    private class EventHandler extends ClientStreamChannelEventHandler {
 
         @Override
-        public void handleStreamData(ClientStreamChannelContext streamChannelContext, StreamResponsePacket packet) {
-            LOGGING.handleStreamData(streamChannelContext, packet);
+        public void handleStreamResponsePacket(ClientStreamChannel streamChannel, StreamResponsePacket packet) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("handleStreamResponsePacket() streamChannel:{}, packet:{}", streamChannel, packet);
+            }
 
-            TBase response = agentService.deserializeResponse(packet.getPayload(), EmptyMessage.emptyMessage());
+            TBase response = agentService.deserializeResponse(packet.getPayload(), null);
             AgentActiveThreadCount activeThreadCount = getAgentActiveThreadCount(response);
             responseAggregator.response(activeThreadCount);
         }
 
         @Override
-        public void handleStreamClose(ClientStreamChannelContext streamChannelContext, StreamClosePacket packet) {
-            LOGGING.handleStreamClose(streamChannelContext, packet);
+        public void handleStreamClosePacket(ClientStreamChannel streamChannel, StreamClosePacket packet) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("handleStreamClosePacket() streamChannel:{}, packet:{}", streamChannel, packet);
+            }
+
             setDefaultErrorMessage(StreamCode.STATE_CLOSED.name());
         }
 
-        private AgentActiveThreadCount getAgentActiveThreadCount(TBase routeResponse) {
-            if (routeResponse instanceof TCommandTransferResponse) {
-                byte[] payload = ((TCommandTransferResponse) routeResponse).getPayload();
-                TBase<?, ?> activeThreadCountResponse = agentService.deserializeResponse(payload, EmptyMessage.emptyMessage());
-
-                AgentActiveThreadCountFactory factory = new AgentActiveThreadCountFactory();
-                factory.setAgentId(agentId);
-                return factory.create(activeThreadCountResponse);
-            } else {
-                logger.warn("getAgentActiveThreadCount failed. applicationName:{}, agentId:{}", applicationName, agentId);
-
-                AgentActiveThreadCountFactory factory = new AgentActiveThreadCountFactory();
-                factory.setAgentId(agentId);
-                return factory.createFail(INTERNAL_ERROR.getMessage());
-            }
-        }
-
-    }
-
-    private class StateChangeListener implements StreamChannelStateChangeEventHandler<ClientStreamChannel> {
-
         @Override
-        public void eventPerformed(ClientStreamChannel streamChannel, StreamChannelStateCode updatedStateCode) throws Exception {
-            logger.info("eventPerformed streamChannel:{}, stateCode:{}", streamChannel, updatedStateCode);
+        public void stateUpdated(ClientStreamChannel streamChannel, StreamChannelStateCode updatedStateCode) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("stateUpdated() streamChannel:{}, stateCode:{}", streamChannel, updatedStateCode);
+            }
 
             switch (updatedStateCode) {
                 case CLOSED:
@@ -261,9 +233,21 @@ public class ActiveThreadCountWorker implements PinpointWebSocketHandlerWorker {
             }
         }
 
-        @Override
-        public void exceptionCaught(ClientStreamChannel streamChannel, StreamChannelStateCode updatedStateCode, Throwable e) {
-            logger.warn("exceptionCaught message:{}, streamChannel:{}, stateCode:{}", e.getMessage(), streamChannel, updatedStateCode, e);
+        private AgentActiveThreadCount getAgentActiveThreadCount(TBase routeResponse) {
+            if (routeResponse instanceof TCommandTransferResponse) {
+                byte[] payload = ((TCommandTransferResponse) routeResponse).getPayload();
+                TBase<?, ?> activeThreadCountResponse = agentService.deserializeResponse(payload, null);
+
+                AgentActiveThreadCountFactory factory = new AgentActiveThreadCountFactory();
+                factory.setAgentId(agentId);
+                return factory.create(activeThreadCountResponse);
+            } else {
+                logger.warn("getAgentActiveThreadCount failed. applicationName:{}, agentId:{}", applicationName, agentId);
+
+                AgentActiveThreadCountFactory factory = new AgentActiveThreadCountFactory();
+                factory.setAgentId(agentId);
+                return factory.createFail(INTERNAL_ERROR.getMessage());
+            }
         }
 
     }

@@ -16,8 +16,6 @@
 
 package com.navercorp.pinpoint.io.header;
 
-import java.util.Map;
-
 /**
  * @author emeroad
  */
@@ -33,7 +31,5 @@ public interface Header {
     byte getVersion();
 
     short getType();
-
-    Map<String, String> getHeaderData();
 }
 
